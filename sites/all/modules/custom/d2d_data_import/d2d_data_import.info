@@ -1,7 +1,0 @@
-name = Drupal to Drupal Data Import
-description = Module to fetch the content from external site
-core = 7.x
-package = Data Import
-version = 7.x-1.0
-configure = admin/config/search/external_settings
-project = d2d_data_import

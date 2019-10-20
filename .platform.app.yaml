@@ -7,14 +7,12 @@
 name: 'app'
 
 # The runtime the application uses.
-type: 'php:7.2'
+type: 'php:7.1'
 
 # Configuration of the build of this application.
 build:
   flavor: drupal
 
-env:
-  Dev
 # The build-time dependencies of the app.
 dependencies:
   php:
@@ -26,7 +24,9 @@ dependencies:
 # to the application in the PLATFORM_RELATIONSHIPS variable. The right-hand
 # side is in the form `<service name>:<endpoint name>`.
 relationships:
-    database: 'db:mysql'
+    database: 'mysqldb:mysql'
+#    solr: 'solrsearch:solr'
+#    redis: 'rediscache:redis'
 
 # The configuration of app when it is exposed to the web.
 web:
@@ -85,18 +85,14 @@ disk: 2048
 
 # The mounts that will be performed when the package is deployed.
 mounts:
-    '/public/sites/default/files':
-        source: local
-        source_path: 'files'
-    '/tmp':
-        source: local
-        source_path: 'tmp'
-    '/private':
-        source: local
-        source_path: 'private'
-    '/drush-backups':
-        source: local
-        source_path: 'drush-backups'
+    '/public/sites/default/files': 'shared:files/files'
+    '/tmp': 'shared:files/tmp'
+    '/private': 'shared:files/private'
+    '/drush-backups': 'shared:files/drush-backups'
+    #'/public/sites/default/private': 'shared:files/default-private'
+    #'/public/sites/all': 'shared:files/all'
+    #'/public/modules': 'shared:files/modules'
+    #'/public/themes': 'shared:files/themes'
 
 # The hooks executed at various points in the lifecycle of the application.
 hooks:
