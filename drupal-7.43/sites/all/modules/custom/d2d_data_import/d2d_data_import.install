@@ -1,0 +1,62 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall function for Search external module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function d2d_data_import_install() {
+  $schema['search_external_settings'] = array(
+    'description' => 'External site search settings.',
+    'fields' => array(
+     'id' => array(
+        'description' => 'Unique identifier',
+        'type' => 'serial',
+        'length' => 64,
+        'not null' => TRUE,
+      ),
+      'brand_name' => array(
+        'description' => 'Site name/Brand Title',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'url' => array(
+        'description' => 'Search url',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('id'),
+    'indexes' => array(
+      'id' => array('id'),
+    ),
+  );
+  db_create_table('search_external_settings', $schema['search_external_settings']);
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function d2d_data_import_uninstall() {
+ db_delete('search_external_settings'); 
+}
+
+/**
+ * Implements hook_enable().
+ */
+function d2d_data_import_enable() {
+  
+}
+
+/**
+ * Implements hook_disable().
+ */
+function d2d_data_import_disable() {
+  
+}

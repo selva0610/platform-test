@@ -1,0 +1,398 @@
+<?php
+
+/**
+ * @file
+ * Code for the Health Search feature.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function d2d_data_import_menu() {
+  $items = array();
+
+  $items['admin/config/search/external_settings'] = array(
+    'title' => 'External Brand search settings',
+    'description' => 'Configuration for External search module',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('external_search_details_form'),
+    'access arguments' => array('access administration pages'),
+    'file' => 'd2d_data_import.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['search/external/autocomplete'] = array(
+    'title' => 'Search external site',
+    'page callback' => 'external_site_search_content',
+    'access callback' => 'user_is_logged_in',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['building/node_data/external'] = array(
+    'page callback' => 'external_site_content_building',
+    'access callback' => 'user_is_logged_in',
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+
+/**
+ * Implements hook_field_info().
+ */
+function d2d_data_import_field_info() {
+  return array(
+    'd2d_data_import_field' => array(
+      'label' => t('D2D Data Import'),
+      'description' => t('Import data from drupal to drupal by search'),
+      'default_widget' => 'widget_d2d_data_import_field',
+	// This is necessary for field to work.
+      'default_formatter' => 'd2d_data_import',
+    // This is necessary for field to work.
+    )
+  );
+}
+
+/**
+ * Implements hook_field_widget_info().
+ *
+ * We must declare our widget for it to "exists" in drupal
+ * which will allow our hook_field_info() to work..
+ * which will allow for our "empty_field_example" to work.
+ *
+ * We don't bother with implementing hook_field_widget_form()... we don't need
+ * the actual /form/ for this "fake"/"empty". we dont want any new input
+ * field to appear on entity/node form.
+ */
+function d2d_data_import_field_widget_info() {
+  return array(
+    'widget_d2d_data_import_field' => array(
+      'label' => t('D2D Data Import widget'),
+      'field types' => array('d2d_data_import_field'),
+	  'settings' => array(
+        'size' => 60,
+        'autocomplete_path' => 'search/external/autocomplete',
+      ),
+    )
+  );
+}
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function d2d_data_import_field_formatter_info() {
+  return array(
+    'd2d_data_import' => array(
+      'label' => t('D2D data import formatter'),
+      'field types' => array('d2d_data_import_field'),
+      'settings' => array(
+        'attribute' => NULL,
+      ),
+    )
+  );
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function d2d_data_import_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, &$items, $display) {
+  global $base_url;
+  $element = array();
+  $element_items = array();
+  // Check field type in case if your module implements multiple field /types/.
+  $settings = $display['settings'];
+  switch ($display['type']) {
+	case 'd2d_data_import':
+	  break;
+  }
+}
+
+/**
+ * Implements hook_field_widget_form().
+ */
+function d2d_data_import_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  $brand_name_list = get_brand_name_list();
+
+      $element[] = array(
+        '#type' => 'select',
+        '#title' => t('Brand Name'),
+        '#options' => $brand_name_list,
+        '#description' => t('Select the brand name from which site we need to search.'),
+        '#weight' => -1,
+      );
+	  
+	  $element[] = array(
+        '#type' => 'textfield',
+        '#title' => 'Search Content',
+        '#maxlength' => 128,
+        '#autocomplete_path' => 'search/external/autocomplete',
+        '#description' => t('Please enter search key words.'),
+        '#weight' => 0,
+      );
+  
+  return $element;
+}
+
+/**
+ * Implements hook_field_formatter_settings_form().
+ */
+function d2d_data_import_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+  switch ($display['type']) {
+	case 'd2d_data_import':
+	  $brand_name_list = get_brand_name_list();
+    
+      $form['selected'] = array(
+        '#type' => 'select',
+        '#title' => t('Brand Name'),
+        '#options' => $brand_name_list,
+        '#description' => t('Select the brand name from which site we need to search.'),
+        '#weight' => -1,
+      );
+	  
+	  $form['search_external_site'] = array(
+        '#type' => 'textfield',
+        '#title' => 'Search Content',
+        '#maxlength' => 128,
+        '#autocomplete_path' => 'search/external/autocomplete',
+        '#description' => t('Please enter search key words.'),
+        '#weight' => 0,
+      );
+	  break;
+  }
+  return $form;
+}
+
+function d2d_data_import_preprocess_node(&$variables) {
+  //echo "<pre>";print_r($variables);die('Selva');
+}
+
+function d2d_data_import_form_alter(&$form, &$form_state, $form_id) {
+  if (isset($form['#node']->type) && $form['#node']->type . '_node_form') {
+    $brand_name_list = get_brand_name_list();
+    if (count($brand_name_list)) {
+      $form['selected'] = array(
+        '#type' => 'select',
+        '#title' => t('Brand Name'),
+        '#options' => $brand_name_list,
+        '#description' => t('Select the brand name from which site we need to search.'),
+        '#weight' => -1,
+      );
+      $form['search_external_site'] = array(
+        '#type' => 'textfield',
+        '#title' => 'Search Content',
+        '#maxlength' => 128,
+        '#autocomplete_path' => 'search/external/autocomplete',
+        '#description' => t('Please enter search key words.'),
+        '#weight' => 0,
+      );
+
+      $variables = array(
+        'path' => 'public://image/picker_img.png',
+        'alt' => 'Pick Data',
+        'title' => 'Pick Data From external site',
+        'attributes' => array('class' => 'some-img', 'id' => 'my-img'),
+      );
+      $img = theme('image', $variables);
+      $form['#prefix'] = theme('external_overlay');
+	  if (!empty($form['#group_children'])) {
+		foreach ($form['#group_children'] as $key => $value) {
+		  $link = l($img, '', array('attributes' => array('class' => array('refresh-link overlaylaunch-inAbox'), 'form_field_name' => $key, 'form_field_type' => $form[$key]['#type']), 'fragment' => 'refresh', 'html' => true));
+		  $form[$key]['#suffix'] = $link;
+		  if ($key != 'title') {
+			$form[$key][LANGUAGE_NONE][0]['value']['#attributes']['class'][] = 'external-data-insert-' . $key;
+			$form[$key][LANGUAGE_NONE][0]['#attributes']['class'][] = 'external-data-insert-' . $key;
+			// $form[$key]['#attributes']['class'][] = 'external-data-insert-' . $key;
+			//epe($form);
+		  }
+		  else {
+			$form[$key]['#attributes']['class'] = array('external-data-insert-' . $key);
+		  }
+		}
+	  }
+    }
+    // echo "<pre>"; print_r($brand_name_list);print_r($form); die('selva');
+  }
+}
+
+function get_brand_name_list() {
+  $query = db_select('search_external_settings', 'e');
+  $query->fields('e', array('brand_name'));
+  $result = $query->execute()->fetchCol();
+  return $result;
+}
+
+function external_site_search_content($string) {
+ // $result = apachesolr_search_search_results($string);
+ $result[] = 'Selvakumar';
+  epe($result);
+  foreach ($result as $key => $value) {
+    if ($value['title']) {
+      $result_key = $value['title'] . ' [' . $value['node']->entity_id . ']';
+      $result_value = array('title' => $value['title'], 'entity_id' => $value['node']->entity_id);
+      $matches[$result_key] = '<div onclick=\'build_autocomplete_data(' . json_encode($result_value) . ');\'>' . $value['bundle'] . '---' . $value['title'] . '</div>';
+    }
+  }
+  drupal_json_output($matches);
+  exit();
+}
+
+function external_site_content_building() {
+  $node_data = $_POST['node_obj'];
+  $search_key = $node_data['title'];
+  $entity_id = $node_data['entity_id'];
+  $result = apachesolr_search_search_results($search_key);
+  //$query = apachesolr_drupal_query("custom", array('q' => '*'));
+  //$query->addParam('fq', "entity_id:10236");
+  //$result = $query->search();
+  //epe($result);
+  foreach ($result as $key => $value) {
+    if ($value['node']->entity_id == $entity_id) {
+      $fields['title'] = $value['title'];
+      $node_obj = $value['entity_view']['#node'];
+    }
+  }
+
+  foreach ($node_obj as $key => $field_value) {
+    if (!is_array($field_value)) {
+      $fields[$key] = $field_value;
+    }
+    elseif (isset($field_value[LANGUAGE_NONE][0]['value'])) {
+      $fields[$key] = $field_value[LANGUAGE_NONE][0]['value'];
+    }
+    elseif (isset($field_value[LANGUAGE_NONE][0]['target_id'])) {
+      $fields[$key . ': Entity Reference'] = $field_value[LANGUAGE_NONE][0]['target_id'];
+//      if($field_value[LANGUAGE_NONE][0]['entity']) {
+//       // epe($field_value[LANGUAGE_NONE][0]['entity'], 1, $key);
+//        $image_uri = $field_value[LANGUAGE_NONE][0]['entity']->field_image['und'][0]['uri'];
+//        $fields[$key . ': Entity Reference'] = '' . $image_uri . '';
+//      }
+    }
+  }
+  print prepare_html_overlay($fields);
+  exit();
+}
+
+function d2d_data_import_init() {
+  drupal_add_js(drupal_get_path('module', 'd2d_data_import') . '/js/d2d_data_import.js');
+  drupal_add_css(drupal_get_path('module', 'd2d_data_import') . '/css/d2d_data_import.css');
+
+ //$query = apachesolr_drupal_query("custom", array('q' => '10236'));
+ //$query->addParam('qf', "entity_id^10");
+ //$result = $query->search();
+//  epe($result);
+  // $conditions['fq'] = 'entity_id:171144';
+  // $result = apachesolr_search_search_results('cheese', $conditions);
+  // epe($result);
+// $result = apachesolr_search_search_results('chicken');
+//$env_id = apachesolr_default_environment();
+//$environment = apachesolr_environment_load($env_id);
+//epe($environment);
+//$environments = search_external_get_solr();
+
+//$params['q'] = '*';
+        // Hardcoded apachesolr name since we rely on this for the facets
+       
+  //      $results = apachesolr_search_run('apachesolr', $params, '', '', 0, $environments);
+//epe($environments);
+
+  
+}
+
+function search_external_get_solr($env_id = NULL) {
+ // $solr_cache = &drupal_static(__FUNCTION__);
+  $environments = apachesolr_load_all_environments();
+
+  if (!interface_exists('DrupalApacheSolrServiceInterface')) {
+    require_once(dirname(__FILE__) . '/apachesolr.interface.inc');
+  }
+
+  if (empty($env_id)) {
+    $env_id = apachesolr_default_environment();
+  }
+  elseif (empty($environments[$env_id])) {
+    throw new Exception(t('Invalid Apache Solr environment: @env_id.', array('@env_id' => $env_id)));
+  }
+  $environments[$env_id]['url'] = 'http://localhost:8080/solr/travelandleisure-site';
+  if (isset($environments[$env_id])) {
+    $class = $environments[$env_id]['service_class'];
+
+    if (empty($solr_cache[$env_id])) {
+      // Use the default class if none is specified.
+      if (empty($class)) {
+        $class = variable_get('apachesolr_service_class', 'DrupalApacheSolrService');
+      }
+      // Takes advantage of auto-loading.
+      $solr = new $class($environments[$env_id]['url'], $env_id);
+      $solr_cache[$env_id] = $solr;
+    }
+    return $solr_cache[$env_id];
+  }
+  else {
+    throw new Exception('No default Apache Solr environment.');
+  }
+}
+
+function prepare_html_overlay($fields) {
+  $data_fields = '';
+  foreach ($fields as $key => $value) {
+    $variables = array(
+      'path' => 'public://image/add_external_data.png',
+      'alt' => 'Pick Data',
+      'title' => 'Pick Data From external site',
+      'attributes' => array('class' => 'some-img', 'id' => 'my-img'),
+    );
+    $add_link = theme('image', $variables);
+    $value_truncate = truncate_utf8(strip_tags($value), 100, TRUE, TRUE);
+    if (is_numeric($value) && strpos($key, ': Entity Reference') !== false) {
+      $link_name = 'reference_link';
+    }
+    else {
+      $link_name = 'normal_link';
+    }
+    $data_arr = array($link_name => $add_link, 'key' => $key, 'value' => $value, 'truncated_value' => $value_truncate);
+    $data_fields .= theme('external_content_overlay_field', $data_arr);
+  }
+  $overlay_content = theme('external_content_overlay', array('field_data' => $data_fields));
+  return $overlay_content;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function d2d_data_import_theme($existing, $type, $theme, $path) {
+  return array(
+    'external_content_overlay_field' => array(
+      'template' => 'external-search-overlay-field',
+      'path' => drupal_get_path('module', 'd2d_data_import') . '/templates',
+      'variables' => array('content' => NULL),
+    ),
+    'external_content_overlay' => array(
+      'template' => 'external-search-overlay',
+      'path' => drupal_get_path('module', 'd2d_data_import') . '/templates',
+      'variables' => array('content' => NULL),
+    ),
+    'external_overlay' => array(
+      'template' => 'external-overlay',
+      'path' => drupal_get_path('module', 'd2d_data_import') . '/templates',
+      'variables' => array('content' => NULL),
+    ),
+  );
+}
+
+function epe($data, $die = 1, $text = 'i am here', $prefix = 'selva') {
+  echo "<pre>" . $prefix;
+  print_r($data);
+  echo "</pre>";
+  if ($die) {
+    die($text);
+  }
+}
+
+function d2d_data_import_field_is_empty($item, $field) {
+  if (!empty($item['value']) && (string) $item['value'] !== '0') {
+    return TRUE;
+  }
+  return FALSE;
+}
