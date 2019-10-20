@@ -13,6 +13,8 @@ type: 'php:7.2'
 build:
   flavor: drupal
 
+env:
+  Dev
 # The build-time dependencies of the app.
 dependencies:
   php:
